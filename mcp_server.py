@@ -33,13 +33,14 @@ def read_document(
     description="Edit the contents of a document by replacing it with new content.",
 )
 def edit_document(
-    doc_id: str = Field(description="The ID of the document to edit."),
-    new_content: str = Field(description="The new content for the document.")
+    doc_id: str = Field(description="Id of the document that will be edited"),
+    old_str: str = Field(description="The text to replace. Must match exactly, including whitespace."),
+    new_str: str = Field(description="The new text to insert in place of the old text.")
 ):
     if doc_id not in docs:
         return f"Error: Document with ID '{doc_id}' not found."
-    docs[doc_id] = new_content
-    return f"Document with ID '{doc_id}' updated successfully."
+    docs[doc_id] = docs[doc_id].replace(old_str, new_str)
+    return f"Document with ID '{doc_id}' updated successfully. Content: {docs[doc_id]}"
 
 # TODO: Write a resource to return all doc id's
 # TODO: Write a resource to return the contents of a particular doc

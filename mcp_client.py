@@ -42,14 +42,14 @@ class MCPClient:
         return self._session
 
     async def list_tools(self) -> list[types.Tool]:
-        # TODO: Return a list of tools defined by the MCP server
-        return []
+        result = await self.session().list_tools()
+        return result.tools
 
     async def call_tool(
         self, tool_name: str, tool_input: dict
     ) -> types.CallToolResult | None:
-        # TODO: Call a particular tool and return the result
-        return None
+        result = await self.session().call_tool(tool_name, tool_input)
+        return result
 
     async def list_prompts(self) -> list[types.Prompt]:
         # TODO: Return a list of prompts defined by the MCP server
@@ -82,10 +82,29 @@ async def main():
         command="uv",
         args=["run", "mcp_server.py"],
     ) as _client:
-        pass
+        result = await _client.list_tools()
+        print(result)
 
 
 if __name__ == "__main__":
     if sys.platform == "win32":
         asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
+
+        # The MCP stdio_client closes subprocess pipes at the OS level without going
+        # through asyncio's transport close mechanism, leaving transport.__del__ calls
+        # that fail with ValueError/"I/O operation on closed pipe" on interpreter exit.
+        # Suppress those specific spurious errors via sys.unraisablehook.
+        _original_hook = sys.unraisablehook
+
+        def _suppress_pipe_cleanup_errors(unraisable):
+            msg = str(unraisable.exc_value).lower()
+            if unraisable.exc_type in (ValueError, RuntimeError) and any(
+                phrase in msg
+                for phrase in ("closed pipe", "i/o operation on closed", "event loop is closed")
+            ):
+                return
+            _original_hook(unraisable)
+
+        sys.unraisablehook = _suppress_pipe_cleanup_errors
+
     asyncio.run(main())
